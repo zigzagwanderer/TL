@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Track Lab</title>
+
+<!-- ─── External Libraries ─── -->
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/browser-id3-writer@4.4.0/dist/browser-id3-writer.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
+
+<!-- ─── Google Fonts ─── -->
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=B612+Mono:wght@400;700&family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;0,800;1,400;1,700&family=Bebas+Neue&family=Oswald:wght@400;600;700&family=Anonymous+Pro:ital,wght@0,400;0,700;1,400&family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&family=IBM+Plex+Mono:ital,wght@0,400;0,700;1,400;1,700&family=Roboto+Condensed:ital,wght@0,400;0,700;1,400;1,700&family=Anton&family=Black+Ops+One&family=Teko:wght@400;600;700&family=Rajdhani:wght@400;600;700&family=Saira+Condensed:wght@400;700;900&family=Orbitron:wght@400;700;900&family=Exo+2:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:ital,wght@0,400;0,700;1,400&family=Major+Mono+Display&family=VT323&family=Press+Start+2P&family=Audiowide&family=Aldrich&family=Gruppo&family=Syncopate:wght@400;700&family=Michroma&family=Jura:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=IM+Fell+English:ital@0;1&family=Cinzel:wght@400;700;900&family=Cormorant+Garamond:ital,wght@0,400;0,700;1,400&family=Alfa+Slab+One&family=Archivo+Black&family=Passion+One:wght@400;700;900&family=Alfa+Slab+One&family=Righteous&family=Bungee&family=Staatliches&family=Six+Caps&family=Pathway+Gothic+One&family=Fjalla+One&family=Graduate&family=Stint+Ultra+Condensed&family=Special+Elite&family=Rye&family=Permanent+Marker&family=Caveat:wght@400;700&family=Kalam:wght@400;700&family=Patrick+Hand&display=swap" rel="stylesheet">
+
+<!-- ─── App Styles ─── -->
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="root"></div>
+
+<!--
+  ╔══════════════════════════════════════════════════════════════════╗
+  ║                  TRACK LAB — MODULE LOADER                       ║
+  ║  Version: 0.5.8                                                  ║
+  ║                                                                  ║
+  ║  Modules load in dependency order. Each file maps to a module   ║
+  ║  from the original monolithic HTML. Edit individual files        ║
+  ║  instead of the giant 8500-line file!                            ║
+  ║                                                                  ║
+  ║  MODULE FILES:                                                   ║
+  ║    module1-constants.js          ~107 lines  CLS, VERSION        ║
+  ║    module2-themes.js             ~83 lines   Themes, Fonts       ║
+  ║    module3-defaults-and-art-editor.js  ~1223 lines  Defaults+Art ║
+  ║    module4-utilities.js          ~62 lines   Helpers, IDB        ║
+  ║    module5-audio-analysis.js     ~1943 lines Audio Analysis      ║
+  ║    module6-filesystem.js         ~324 lines  FSAPI, Save         ║
+  ║    module7-ui-hooks.js           ~440 lines  useDragResize       ║
+  ║    module8-ui-primitives.js      ~69 lines   mkBtn, TInp...      ║
+  ║    module9-label-components.js   ~122 lines  TrackLabel, QR      ║
+  ║    module10-label-panel.js       ~366 lines  Label Panel UI      ║
+  ║    module11-archive-components.js ~81 lines  EntryCard           ║
+  ║    module12-player-components.js  ~512 lines PlayerView          ║
+  ║    module13-gate-and-export.js    ~78 lines  LicenseGate         ║
+  ║    module14-app.js               ~3121 lines App root            ║
+  ╚══════════════════════════════════════════════════════════════════╝
+-->
+
+<!-- ─── Data / Config Modules (no dependencies) ─── -->
+<script type="text/babel" src="module1-constants.js" data-type="module"></script>
+<script type="text/babel" src="module2-themes.js" data-type="module"></script>
+<script type="text/babel" src="module3-defaults-and-art-editor.js" data-type="module"></script>
+
+<!-- ─── Pure Utility Modules ─── -->
+<script type="text/babel" src="module4-utilities.js" data-type="module"></script>
+
+<!-- ─── UI Building Blocks ─── -->
+<script type="text/babel" src="module8-ui-primitives.js" data-type="module"></script>
+<script type="text/babel" src="module9-label-components.js" data-type="module"></script>
+<script type="text/babel" src="module10-label-panel.js" data-type="module"></script>
+<script type="text/babel" src="module11-archive-components.js" data-type="module"></script>
+<script type="text/babel" src="module12-player-components.js" data-type="module"></script>
+<script type="text/babel" src="module13-gate-and-export.js" data-type="module"></script>
+
+<!-- ─── Feature Modules ─── -->
+<script type="text/babel" src="module5-audio-analysis.js" data-type="module"></script>
+<script type="text/babel" src="module6-filesystem.js" data-type="module"></script>
+<script type="text/babel" src="module7-ui-hooks.js" data-type="module"></script>
+
+<!-- ─── App Root (loads last, depends on everything above) ─── -->
+<script type="text/babel" src="module14-app.js" data-type="module"></script>
+
+</body>
+</html>
