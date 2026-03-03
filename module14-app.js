@@ -495,7 +495,7 @@ function App(){
         const blob=new Blob([buf],{type:file.type});
         const objUrl=URL.createObjectURL(blob);
         setEntries(prev=>prev.map(e=>e.id===ent.id?{...e,hasAudio:true,analyzing:false}:e));
-        if(activeEidRef.current===ent.id){_setAudioUrl(objUrl);setPlayingEid(ent.id);}
+        if(activeEidRef.current===ent.id){_setAudioUrl(objUrl);setPlayingEid(ent.id);setAudioFile({name:file.name,type:file.type,key:`audio_${ent.id}`});}
         if(typeof jsmediatags!=='undefined'){
           jsmediatags.read(file,{
             onSuccess(tag){
@@ -523,6 +523,8 @@ function App(){
           // Queue analysis serially — running multiple OfflineAudioContexts simultaneously
           // bogs down the browser's audio engine and makes the UI janky.
           analysisQueueRef.current=analysisQueueRef.current.then(async()=>{
+            const isActive=activeEidRef.current===ent.id;
+            if(isActive)setLufsAnalyzing(true);
             try{
               const audioContext=new (window.AudioContext||window.webkitAudioContext)();
               const decoded=await audioContext.decodeAudioData(buf.slice(0));
@@ -533,6 +535,7 @@ function App(){
                 if(activeEidRef.current===ent.id)setMetaRaw(m=>{const nm={...m,...analysis};saveLS('tl_metadata',nm);return nm;});
               }
             }catch{}
+            finally{if(isActive)setLufsAnalyzing(false);}
           });
           await analysisQueueRef.current;
         }catch{}
@@ -2227,23 +2230,23 @@ function App(){
           </div>
         )}
         {metaSection==='codes'&&(
-          <div style={{display:'flex',gap:20,alignItems:'flex-start',maxWidth:900}}>
+          <div style={{display:'flex',gap:20,alignItems:'flex-start',maxWidth:900,flexWrap:'wrap'}}>
             {/* Left — form fields */}
-            <div style={{flex:'0 0 400px',minWidth:0}}>
+            <div style={{flex:'0 1 400px',minWidth:0,maxWidth:'100%'}}>
             <div style={h2S}>Registration Codes</div>
             <div style={{fontSize:10,color:T.muted,marginBottom:18,padding:12,background:T.card,border:`1px solid ${T.border}`,borderRadius:T.r||0,lineHeight:1.7}}>
               These codes are embedded into exported MP3 files and can be sent to the label design. <strong style={{color:T.text}}>ISRC</strong> identifies a specific recording. <strong style={{color:T.text}}>UPC/EAN</strong> identifies the release as a product. <strong style={{color:T.text}}>ISWC</strong> identifies the composition.
             </div>
             <MF T={T} label="ISRC — International Standard Recording Code" hint="Format: CC-XXX-YY-NNNNN · e.g. GB-A3Z-23-00001 · Required for streaming, SoundExchange, PPL">
-              <div style={{position:'relative'}}>
+              <div style={{position:'relative',overflow:'hidden'}}>
                 <TInp T={T} value={meta.isrc} onChange={e=>setMeta('isrc',e.target.value.toUpperCase())} placeholder="GB-A3Z-23-00001" style={{borderColor:meta.isrc?(isrcValid(meta.isrc)?'#3fb950':'#f85149'):T.border,paddingRight:76}}/>
-                <span style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',fontSize:8,color:meta.isrc?(isrcValid(meta.isrc)?'#3fb950':'#f85149'):T.muted}}>{meta.isrc?(isrcValid(meta.isrc)?'✓ VALID':'✗ FORMAT'):'XX-XXX-YY-NNNNN'}</span>
+                <span style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',fontSize:8,color:meta.isrc?(isrcValid(meta.isrc)?'#3fb950':'#f85149'):T.muted,whiteSpace:'nowrap'}}>{meta.isrc?(isrcValid(meta.isrc)?'✓ VALID':'✗ FORMAT'):'XX-XXX-YY-NNNNN'}</span>
               </div>
             </MF>
             <MF T={T} label="UPC / EAN — Universal Product Code" hint="12-digit UPC-A or 13-digit EAN-13 · Obtain via GS1 or your distributor">
-              <div style={{position:'relative'}}>
+              <div style={{position:'relative',overflow:'hidden'}}>
                 <TInp T={T} value={meta.upc} onChange={e=>setMeta('upc',e.target.value)} placeholder="012345678905" style={{borderColor:meta.upc?(upcValid(meta.upc)?'#3fb950':'#f85149'):T.border,paddingRight:76}}/>
-                <span style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',fontSize:8,color:meta.upc?(upcValid(meta.upc)?'#3fb950':'#f85149'):T.muted}}>{meta.upc?(upcValid(meta.upc)?'✓ VALID':'✗ 12–13 digits'):'12 or 13 digits'}</span>
+                <span style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',fontSize:8,color:meta.upc?(upcValid(meta.upc)?'#3fb950':'#f85149'):T.muted,whiteSpace:'nowrap'}}>{meta.upc?(upcValid(meta.upc)?'✓ VALID':'✗ 12–13 digits'):'12 or 13 digits'}</span>
               </div>
             </MF>
             <MF T={T} label="ISWC — Int'l Standard Musical Work Code" hint="Identifies the composition (not the recording) · Format: T-XXXXXXXXX-C · Assigned by your PRO (ASCAP, BMI, PRS, SOCAN)">
@@ -2430,7 +2433,7 @@ function App(){
                   badge:v=>parseFloat(v)>0.5?'⚠ remove before mastering':null},
               ].map(({key,label,hint,color,badge})=>(
                 <MF key={key} T={T} label={label} hint={hint}>
-                  <div style={{position:'relative'}}>
+                  <div style={{position:'relative',overflow:'hidden'}}>
                     <TInp T={T} value={lufsAnalyzing?'Analyzing…':(meta[key]||'')} readOnly
                       placeholder="Upload an audio file to analyze…"
                       style={{cursor:'default',
@@ -3118,4 +3121,3 @@ function App(){
 }
 
 ReactDOM.render(<App/>,document.getElementById('root'));
-</script>

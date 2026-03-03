@@ -1,6 +1,8 @@
 // ╔══════════════════════════════════════════════════════════════╗
 // ║  MODULE 1: CONSTANTS & CLASSIFICATION                        ║
 // ╚══════════════════════════════════════════════════════════════╝
+// ━━━━━━━━ REACT GLOBALS — destructured once, shared across all modules ━━━━━━━━
+const { useState, useEffect, useCallback, useRef, useMemo } = React;
 // ━━━━━━━━ VERSION ━━━━━━━━
 const VERSION='0.5.7';
 // ━━━━━━━━ CLASSIFICATION ━━━━━━━━

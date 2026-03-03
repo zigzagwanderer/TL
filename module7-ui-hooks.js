@@ -221,31 +221,43 @@ function SplitSheet({T,credits,onChange,trackTitle}){
 //   - Float32Array mono downmix reused across all windows — single allocation
 //   - Returns actual dBFS rawDb values so SpectralGraph can draw a real dB axis
 //
-// BAND DEFINITIONS (8 perceptual bands):
-//   Sub 20-60 | Bass 60-200 | Low-Mid 200-500 | Mid 500-2k
-//   Upper-Mid 2k-5k | Presence 5k-8k | Brilliance 8k-12k | Air 12k-20k
+// BAND DEFINITIONS (40-point logarithmic bands, 20 Hz → 20 kHz):
+//   Generated procedurally — equal perceptual weight per band, enough
+//   data points in the 10kHz–20kHz range to show a curve, not a flat line.
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async function generateSpectralProfile(audioBuffer) {
   try {
     var sr          = audioBuffer.sampleRate;
     var numCh       = audioBuffer.numberOfChannels;
     var totalLen    = audioBuffer.length;
-    var FFT_SIZE    = 8192;
+    var FFT_SIZE    = 16384;
     var NUM_WINDOWS = 6;          // reduced from 12 — fewer OAC instances
     var nyquist     = sr / 2;
     var binHz       = sr / FFT_SIZE;
     var halfFFT     = FFT_SIZE / 2;
 
-    var BANDS = [
-      { id:'sub',        label:'Sub',        lo:    20, hi:    60 },
-      { id:'bass',       label:'Bass',       lo:    60, hi:   200 },
-      { id:'lowmid',     label:'Low-Mid',    lo:   200, hi:   500 },
-      { id:'mid',        label:'Mid',        lo:   500, hi:  2000 },
-      { id:'uppermid',   label:'Upper-Mid',  lo:  2000, hi:  5000 },
-      { id:'presence',   label:'Presence',   lo:  5000, hi:  8000 },
-      { id:'brilliance', label:'Brilliance', lo:  8000, hi: 12000 },
-      { id:'air',        label:'Air',        lo: 12000, hi: 20000 },
-    ];
+    // 40-point logarithmically spaced bands, 20 Hz → 20 kHz.
+    // Log spacing gives equal perceptual weight per band and ensures the
+    // 10kHz–20kHz range has enough points to show a curve, not a flat line.
+    var NUM_BANDS   = 40;
+    var FREQ_LO     = 20;
+    var FREQ_HI     = 20000;
+    var centerFreqs = [];
+    for (var ci = 0; ci < NUM_BANDS; ci++) {
+      centerFreqs.push(FREQ_LO * Math.pow(FREQ_HI / FREQ_LO, ci / (NUM_BANDS - 1)));
+    }
+    var BANDS = [];
+    for (var bdi = 0; bdi < NUM_BANDS; bdi++) {
+      var cLo = bdi === 0            ? FREQ_LO : Math.sqrt(centerFreqs[bdi - 1] * centerFreqs[bdi]);
+      var cHi = bdi === NUM_BANDS - 1 ? FREQ_HI : Math.sqrt(centerFreqs[bdi] * centerFreqs[bdi + 1]);
+      var cf  = centerFreqs[bdi];
+      BANDS.push({
+        id:    'band' + bdi,
+        label: cf < 1000 ? Math.round(cf) + ' Hz' : (cf / 1000).toFixed(1) + ' kHz',
+        lo:    cLo,
+        hi:    cHi,
+      });
+    }
 
     // Clamp band hi to Nyquist
     for (var bi = 0; bi < BANDS.length; bi++) {
