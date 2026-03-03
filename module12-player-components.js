@@ -363,7 +363,7 @@ function DetailMiniPlayer({T,entry,audioElRef,audioObjectUrl,isCurrentEntry,onLo
   );
 }
 // ━━━━━━━━ FLOATING PLAYER ━━━━━━━━
-function FloatingPlayer({T,audioObjectUrl,audioFile,activeEntry,meta,autoHide,audioElRef}){
+function FloatingPlayer({T,audioObjectUrl,audioFile,activeEntry,meta,autoHide,audioElRef,onPrev,onNext}){
   const audioEl=audioElRef;
   const [playing,setPlaying]=useState(false);
   const [currentTime,setCurrentTime]=useState(0);
@@ -398,15 +398,8 @@ function FloatingPlayer({T,audioObjectUrl,audioFile,activeEntry,meta,autoHide,au
   },[]);
 
   // Auto-hide hover handlers
-  const handleMouseEnter=()=>{
-    if(!autoHide)return;
-    clearTimeout(hideTimer.current);
-    setRevealed(true);
-  };
-  const handleMouseLeave=()=>{
-    if(!autoHide)return;
-    hideTimer.current=setTimeout(()=>setRevealed(false),600);
-  };
+  const handleMouseEnter=()=>{if(!autoHide)return;clearTimeout(hideTimer.current);setRevealed(true);};
+  const handleMouseLeave=()=>{if(!autoHide)return;hideTimer.current=setTimeout(()=>setRevealed(false),600);};
 
   // When autoHide is turned off, reset revealed state
   useEffect(()=>{if(!autoHide)setRevealed(false);},[autoHide]);
@@ -421,90 +414,100 @@ function FloatingPlayer({T,audioObjectUrl,audioFile,activeEntry,meta,autoHide,au
   const thumb=activeEntry?.albumArtThumb||(meta?.albumArt&&!meta.albumArt.startsWith('[stored]')?meta.albumArt:null);
   const hasTrack=!!audioObjectUrl;
 
-  // Compute transform: autoHide takes precedence over manual minimized
-  let translateY='translateY(0)';
-  if(autoHide) translateY=revealed?'translateY(0)':'translateY(calc(100% - 4px))';
-  else if(minimized) translateY='translateY(calc(100% - 6px))';
-
-  // Pill slides up from bottom-center; collapses to a slim handle when minimized/auto-hidden
   let pillTranslateY='translateY(0)';
   if(autoHide) pillTranslateY=revealed?'translateY(0)':'translateY(calc(100% + 12px))';
   else if(minimized) pillTranslateY='translateY(calc(100% + 12px))';
 
-  return(
-    <div style={{position:'fixed',bottom:16,left:0,right:0,zIndex:500,display:'flex',justifyContent:'center',pointerEvents:'none'}}>
-      {/* Hidden real audio element — lives outside pill so src persists through visibility changes */}
-      <audio ref={audioEl} preload="metadata" style={{display:'none'}}/>
+  const btnBase={background:'none',border:'none',fontFamily:'inherit',lineHeight:1,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0};
+  const navBtn=(active)=>({...btnBase,fontSize:14,padding:'4px 8px',color:active?T.text:T.muted,cursor:active?'pointer':'default',opacity:active?1:0.35});
 
-      {/* Minimized / auto-hide peek tab — always visible when pill is hidden */}
-      {(minimized||(!revealed&&autoHide))&&(
+  const peekTab=(
+    <div
+      onMouseEnter={handleMouseEnter}
+      onClick={()=>{if(!autoHide)setMinimized(false);}}
+      style={{display:(minimized||(!revealed&&autoHide))?'flex':'none',
+        pointerEvents:'auto',cursor:'pointer',
+        background:T.panel,border:`1px solid ${T.border}`,borderBottom:'none',
+        borderRadius:T.r?`${T.r+3}px ${T.r+3}px 0 0`:'0',
+        padding:'4px 18px 2px',alignItems:'center',gap:8}}>
+      {playing&&<div style={{width:5,height:5,borderRadius:'50%',background:T.accent,animation:'tl-spin 1.2s linear infinite'}}/>}
+      <div style={{fontSize:8,letterSpacing:'0.15em',textTransform:'uppercase',color:playing?T.accent:T.muted,maxWidth:160,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+        {playing?title:'▶ Player'}
+      </div>
+      {playing&&<div style={{width:5,height:5,borderRadius:'50%',background:T.accent,animation:'tl-spin 1.2s linear infinite'}}/>}
+    </div>
+  );
+
+  return(
+    <div style={{position:'sticky',bottom:0,height:0,overflow:'visible',zIndex:9999,pointerEvents:'none'}}>
+      <audio ref={audioEl} preload="metadata" style={{display:'none'}}/>
+      <div style={{position:'absolute',bottom:0,left:0,right:0,display:'flex',flexDirection:'column',alignItems:'center',pointerEvents:'none'}}>
+      <div style={{width:'100%',display:(minimized||(autoHide&&!revealed))?'none':'flex',justifyContent:'center',pointerEvents:'none',padding:'0 16px 16px'}}>
+        {/* ── COMPACT PILL ── */}
         <div
           onMouseEnter={handleMouseEnter}
-          onClick={()=>{if(!autoHide)setMinimized(false);}}
-          style={{position:'fixed',bottom:0,left:'50%',transform:'translateX(-50%)',pointerEvents:'auto',cursor:'pointer',
-            background:T.panel,border:`1px solid ${T.border}`,borderBottom:'none',
-            borderRadius:T.r?`${T.r+3}px ${T.r+3}px 0 0`:'0',
-            padding:'4px 18px 2px',display:'flex',alignItems:'center',gap:8}}>
-          {playing&&<div style={{width:5,height:5,borderRadius:'50%',background:T.accent,animation:'tl-spin 1.2s linear infinite'}}/>}
-          <div style={{fontSize:8,letterSpacing:'0.15em',textTransform:'uppercase',color:playing?T.accent:T.muted,maxWidth:160,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-            {playing?title:'▶ Player'}
-          </div>
-          {playing&&<div style={{width:5,height:5,borderRadius:'50%',background:T.accent,animation:'tl-spin 1.2s linear infinite'}}/>}
-        </div>
-      )}
+          onMouseLeave={handleMouseLeave}
+          style={{
+            pointerEvents:'auto',
+            width:'min(480px,calc(100vw - 32px))',
+            background:T.panel,
+            border:`1px solid ${T.border}`,
+            borderRadius:T.r?T.r+20:0,
+            boxShadow:'0 8px 32px rgba(0,0,0,0.6)',
+            transition:'transform 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.25s ease',
+            transform:pillTranslateY,
+            opacity:(minimized||(autoHide&&!revealed))?0:1,
+            overflow:'hidden',
+          }}>
 
-      {/* ── COMPACT PILL ── */}
-      <div
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        style={{
-          pointerEvents:'auto',
-          width:'min(460px,calc(100vw - 32px))',
-          background:T.panel,
-          border:`1px solid ${T.border}`,
-          borderRadius:T.r?T.r+20:0,
-          boxShadow:'0 8px 32px rgba(0,0,0,0.6)',
-          transition:'transform 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.25s ease',
-          transform:pillTranslateY,
-          opacity:(minimized||(autoHide&&!revealed))?0:1,
-          overflow:'hidden',
-        }}>
-
-        {/* Top row: art + info + play + dismiss */}
-        <div style={{display:'flex',alignItems:'center',gap:10,padding:'8px 12px 6px'}}>
-          {/* Thumb */}
-          <div style={{width:32,height:32,flexShrink:0,border:`1px solid ${T.border}`,borderRadius:T.r||0,overflow:'hidden',background:T.bg,display:'flex',alignItems:'center',justifyContent:'center'}}>
-            {thumb?<img src={thumb} style={{width:'100%',height:'100%',objectFit:'cover'}} alt=""/>:<div style={{fontSize:12,opacity:0.2}}>♫</div>}
+          {/* Row 1: art + info + collapse */}
+          <div style={{display:'flex',alignItems:'center',gap:10,padding:'8px 12px 4px'}}>
+            <div style={{width:32,height:32,flexShrink:0,border:`1px solid ${T.border}`,borderRadius:T.r||0,overflow:'hidden',background:T.bg,display:'flex',alignItems:'center',justifyContent:'center'}}>
+              {thumb?<img src={thumb} style={{width:'100%',height:'100%',objectFit:'cover'}} alt=""/>:<div style={{fontSize:12,opacity:0.2}}>♫</div>}
+            </div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:10,fontWeight:700,color:hasTrack?T.bright:T.sub,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',lineHeight:1.3}}>{title}</div>
+              {artist&&<div style={{fontSize:8,color:T.muted,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{artist}</div>}
+            </div>
+            <button onClick={()=>!autoHide&&setMinimized(true)} style={{...btnBase,color:T.muted,fontSize:14,padding:'0 2px'}} title="Minimise player">⌄</button>
           </div>
-          {/* Title + artist */}
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{fontSize:10,fontWeight:700,color:hasTrack?T.bright:T.sub,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',lineHeight:1.3}}>{title}</div>
-            {artist&&<div style={{fontSize:8,color:T.muted,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{artist}</div>}
-          </div>
-          {/* Play/Pause */}
-          <button onClick={togglePlay} disabled={!hasTrack} style={{flexShrink:0,width:30,height:30,borderRadius:'50%',border:`1px solid ${hasTrack?T.accent:T.border}`,background:hasTrack?T.accent:'transparent',color:hasTrack?T.bg:T.muted,fontSize:11,cursor:hasTrack?'pointer':'default',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'inherit',lineHeight:1}}>
-            {playing?'▮▮':'▶'}
-          </button>
-          {/* Collapse button */}
-          <button onClick={()=>!autoHide&&setMinimized(true)} style={{flexShrink:0,background:'none',border:'none',color:T.muted,cursor:'pointer',fontSize:14,padding:'0 2px',lineHeight:1}} title="Minimise player">⌄</button>
-        </div>
 
-        {/* Progress row */}
-        <div style={{display:'flex',alignItems:'center',gap:7,padding:'0 12px 8px'}}>
-          <span style={{fontSize:7,color:T.muted,flexShrink:0,fontVariantNumeric:'tabular-nums',letterSpacing:'0.04em'}}>{fmt(currentTime)}</span>
-          {/* Clickable progress bar */}
-          <div style={{flex:1,height:20,display:'flex',alignItems:'center',cursor:hasTrack?'pointer':'default'}}
-            onClick={e=>{if(!hasTrack||!duration)return;const r=e.currentTarget.getBoundingClientRect();seek((e.clientX-r.left)/r.width*duration);}}>
-            <div style={{width:'100%',height:2,background:T.border,borderRadius:2,overflow:'hidden'}}>
-              <div style={{width:`${duration?currentTime/duration*100:0}%`,height:'100%',background:T.accent,transition:'width 0.1s linear'}}/>
+          {/* Row 2: transport centered, volume on the right */}
+          <div style={{display:'flex',alignItems:'center',padding:'4px 12px 4px',position:'relative'}}>
+            {/* Left spacer */}
+            <div style={{flex:1}}/>
+            {/* Transport — absolutely centered */}
+            <div style={{position:'absolute',left:'50%',transform:'translateX(-50%)',display:'flex',alignItems:'center',gap:8}}>
+              <button onClick={onPrev} disabled={!hasTrack||!onPrev} title="Previous track" style={navBtn(hasTrack&&!!onPrev)}>⏮</button>
+              <button onClick={togglePlay} disabled={!hasTrack}
+                style={{width:34,height:34,borderRadius:'50%',border:`1px solid ${hasTrack?T.accent:T.border}`,background:hasTrack?T.accent:'transparent',color:hasTrack?T.bg:T.muted,fontSize:12,cursor:hasTrack?'pointer':'default',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'inherit',lineHeight:1,flexShrink:0}}>
+                {playing?'⏸':'▶'}
+              </button>
+              <button onClick={onNext} disabled={!hasTrack||!onNext} title="Next track" style={navBtn(hasTrack&&!!onNext)}>⏭</button>
+            </div>
+            {/* Volume — right side */}
+            <div style={{flex:1,display:'flex',alignItems:'center',gap:5,justifyContent:'flex-end'}}>
+              <input type="range" min={0} max={1} step={0.02} value={volume} onChange={e=>changeVol(+e.target.value)} style={{width:68,accentColor:T.accent,flexShrink:0}}/>
+              <span style={{fontSize:11,color:T.muted,cursor:'pointer',flexShrink:0}} onClick={()=>changeVol(volume>0?0:1)} title={volume===0?'Unmute':'Mute'}>
+                {volume===0?'🔇':volume<0.5?'🔉':'🔊'}
+              </span>
             </div>
           </div>
-          <span style={{fontSize:7,color:T.muted,flexShrink:0,fontVariantNumeric:'tabular-nums',letterSpacing:'0.04em'}}>{fmt(duration)}</span>
-          {/* Volume icon only (no slider — keeps pill tight) */}
-          <span style={{fontSize:11,color:T.muted,cursor:'pointer',flexShrink:0,marginLeft:2}} onClick={()=>changeVol(volume>0?0:1)} title={volume===0?'Unmute':'Mute'}>
-            {volume===0?'🔇':volume<0.5?'🔉':'🔊'}
-          </span>
+
+          {/* Row 3: progress */}
+          <div style={{display:'flex',alignItems:'center',gap:7,padding:'2px 12px 8px'}}>
+            <span style={{fontSize:7,color:T.muted,flexShrink:0,fontVariantNumeric:'tabular-nums',letterSpacing:'0.04em'}}>{fmt(currentTime)}</span>
+            <div style={{flex:1,height:20,display:'flex',alignItems:'center',cursor:hasTrack?'pointer':'default'}}
+              onClick={e=>{if(!hasTrack||!duration)return;const r=e.currentTarget.getBoundingClientRect();seek((e.clientX-r.left)/r.width*duration);}}>
+              <div style={{width:'100%',height:2,background:T.border,borderRadius:2,overflow:'hidden'}}>
+                <div style={{width:`${duration?currentTime/duration*100:0}%`,height:'100%',background:T.accent,transition:'width 0.1s linear'}}/>
+              </div>
+            </div>
+            <span style={{fontSize:7,color:T.muted,flexShrink:0,fontVariantNumeric:'tabular-nums',letterSpacing:'0.04em'}}>{fmt(duration)}</span>
+          </div>
         </div>
+      </div>
+      {peekTab}
       </div>
     </div>
   );

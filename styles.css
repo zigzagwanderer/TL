@@ -1,5 +1,6 @@
 *{box-sizing:border-box;}
-html,body{margin:0;height:100%;overflow-x:hidden;overflow-y:auto;background:var(--app-bg,#06060a);}
+html{margin:0;height:100%;}
+body{margin:0;height:100%;overflow-x:hidden;overflow-y:auto;background:var(--app-bg,#06060a);}
 body{font-family:'Share Tech Mono',monospace;}
 #root{height:100%;}
 ::-webkit-scrollbar{width:4px;height:4px;}

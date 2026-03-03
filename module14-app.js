@@ -860,11 +860,29 @@ function App(){
   // changed by the time it completes, the result is stale and discarded.
   // This prevents overlapping recalculate calls from racing each other.
   const _analysisGenRef=useRef(0);
+  const _audioCtxRef=useRef(null);
+  const [analyserNode,setAnalyserNode]=useState(null);
 
   // ── DB BOOT + UNMOUNT CLEANUP
   useEffect(()=>{
     initDB().catch(err=>console.warn('[TrackLab] IndexedDB init failed:',err));
     return()=>{if(_activeObjectUrl.current)URL.revokeObjectURL(_activeObjectUrl.current);};
+  },[]);
+
+  // ── LIVE EQ METER — wire AudioContext + AnalyserNode to the shared <audio> element
+  // Ref assignment for DOM nodes happens during commit (before effects), so
+  // audioElRef.current is populated by the time this [] effect fires.
+  useEffect(()=>{
+    const el=audioElRef.current;if(!el||_audioCtxRef.current)return;
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    const analyser=ctx.createAnalyser();analyser.fftSize=256;
+    const source=ctx.createMediaElementSource(el);
+    source.connect(analyser);analyser.connect(ctx.destination);
+    _audioCtxRef.current=ctx;setAnalyserNode(analyser);
+    // Browsers suspend AudioContext until a user gesture — resume on first play
+    const resume=()=>{if(ctx.state==='suspended')ctx.resume();};
+    el.addEventListener('play',resume);
+    return()=>el.removeEventListener('play',resume);
   },[]);
 
   // ── App-level playing state — mirrors the audioElRef element so any component can read it
@@ -2405,7 +2423,7 @@ function App(){
         )}
         {metaSection==='analysis'&&(
           <div style={{width:'100%',minWidth:0}}>
-            <AnalysisPanel T={T} meta={meta} audioFile={audioFile} lufsAnalyzing={lufsAnalyzing} recalculate={recalculateAnalysis}/>
+            <AnalysisPanel T={T} meta={meta} audioFile={audioFile} lufsAnalyzing={lufsAnalyzing} recalculate={recalculateAnalysis} analyserNode={analyserNode}/>
           </div>
         )}
         {metaSection==='extra'&&(
@@ -3107,6 +3125,28 @@ function App(){
         <div style={{display:tab==='viz'?'flex':'none',minHeight:'calc(100vh - 44px)',flexDirection:'column'}}>
           <PlayerView T={T} audioElRef={audioElRef} audioObjectUrl={audioObjectUrl} activeEntry={activeEntry} activeEid={activeEid} meta={meta} audioFile={audioFile} entries={entries} profiles={profiles} activePid={activePid} setActivePid={setActivePid} loadEntry={loadEntry} setAudioObjectUrl={setAudioObjectUrl} setAudioFile={setAudioFile} playerVisible={!!audioObjectUrl&&!appTheme.playerAutoHide}/>
         </div>
+        <FloatingPlayer T={T} audioObjectUrl={audioObjectUrl} audioFile={audioFile} activeEntry={activeEntry} meta={meta} autoHide={!!appTheme.playerAutoHide} audioElRef={audioElRef}
+          onPrev={async()=>{
+            const pid=activePidRef.current;
+            const profList=entriesRef.current.filter(e=>e.profileId===pid).sort((a,b)=>(b.updated||'').localeCompare(a.updated||''));
+            const idx=profList.findIndex(e=>e.id===playingEidRef.current);
+            if(idx<=0)return;
+            const prev=profList[idx-1];
+            await loadEntryRef.current(prev);
+            setPlayingEid(prev.id);
+            requestAnimationFrame(()=>requestAnimationFrame(()=>audioElRef.current?.play()));
+          }}
+          onNext={async()=>{
+            const pid=activePidRef.current;
+            const profList=entriesRef.current.filter(e=>e.profileId===pid).sort((a,b)=>(b.updated||'').localeCompare(a.updated||''));
+            const idx=profList.findIndex(e=>e.id===playingEidRef.current);
+            if(idx===-1||idx>=profList.length-1)return;
+            const next=profList[idx+1];
+            await loadEntryRef.current(next);
+            setPlayingEid(next.id);
+            requestAnimationFrame(()=>requestAnimationFrame(()=>audioElRef.current?.play()));
+          }}
+        />
       </div>
       {/* Hidden off-screen div for archive label export */}
       {archiveLabelExport&&(
@@ -3114,7 +3154,6 @@ function App(){
           <TrackLabel fields={archiveLabelExport.fields} settings={archiveLabelExport.settings}/>
         </div>
       )}
-      <FloatingPlayer T={T} audioObjectUrl={audioObjectUrl} audioFile={audioFile} activeEntry={activeEntry} meta={meta} autoHide={!!appTheme.playerAutoHide} audioElRef={audioElRef}/>
     </div>
     </LicenseGate>
   );

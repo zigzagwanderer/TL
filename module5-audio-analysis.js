@@ -1779,6 +1779,7 @@ function AnalysisPanel(props){
   var audioFile=props.audioFile;
   var lufsAnalyzing=props.lufsAnalyzing;
   var recalculate=props.recalculate;
+  var analyserNode=props.analyserNode||null;  // AnalyserNode | null — pre-connected, passed from player
   var hasData=!!meta.lufs;
 
   // Lifted state — shared across all LoudnessGraph section renders
@@ -1925,6 +1926,27 @@ function AnalysisPanel(props){
           {/* ── G. EQ PROFILE ───────────────────────────────────────────────── */}
           <div style={{marginBottom:20}}>
             <span style={sectionLabel}>EQ Profile</span>
+
+            {/* Live EQ strip — imperative SVG bars, zero React reconciliation per frame */}
+            <div style={{
+              display:'flex',alignItems:'center',gap:10,
+              padding:'5px 10px',marginBottom:8,
+              background:T.card,border:'1px solid '+T.border,borderRadius:T.r||0
+            }}>
+              <span style={{
+                fontSize:8,letterSpacing:'0.16em',textTransform:'uppercase',
+                color:T.muted,fontFamily:"'Share Tech Mono',monospace",
+                whiteSpace:'nowrap',lineHeight:1
+              }}>Live EQ</span>
+              <LiveEQMeter analyserNode={analyserNode} T={T}/>
+              <span style={{
+                fontSize:7,letterSpacing:'0.14em',textTransform:'uppercase',
+                color:analyserNode?T.accent:T.muted,
+                fontFamily:"'Share Tech Mono',monospace",
+                lineHeight:1,marginLeft:'auto'
+              }}>{analyserNode?'live':'paused'}</span>
+            </div>
+
             <SpectralGraph T={T} bands={meta.spectralProfile||null} analyzing={lufsAnalyzing}/>
           </div>
 
